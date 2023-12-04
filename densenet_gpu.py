@@ -13,56 +13,10 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
-from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms, models
+from torch.utils.data import DataLoader
+import image_dataset
 from tqdm import tqdm
-
-# Dataset Class
-class ImageDataset(Dataset):
-    def __init__(self, train=True, transform=None):
-        postfix = 'train' if train else 'test'
-        self.folder_path = f'data/{postfix}'
-        self.df = pd.read_csv(f'data/train_with_target_id.csv') if train else pd.read_csv(f'data/{postfix}.csv')
-        self.train = train
-        if self.train:
-            self.y = self.df['target_id'].values
-        self.transform = transform
-        self.file_list = self._get_file_list()
-
-    def __len__(self):
-        return len(self.file_list)
-
-    def __getitem__(self, idx):
-        img_name = self.file_list[idx]
-        img_path = os.path.join(self.folder_path, img_name)
-        image = Image.open(img_path)
-        if self.transform:
-            image = self.transform(image)
-
-        if self.train:
-            print(f'Idx: {idx}')
-            print(f'self.y[idx]: {self.y[idx]}')
-            label = torch.tensor(self.y[idx])
-            print(label.shape)
-            return image, label
-        
-        return image
-
-    def _get_file_list(self):
-        try:
-            files = [file for file in os.listdir(self.folder_path) if file.endswith('.png')]
-            return files
-        except FileNotFoundError:
-            print(f"The folder '{self.folder_path}' does not exist.")
-            return []
-
-    def _extract_label(self, filename):
-        # Implement logic to extract label from filename or path
-        # For example, if filenames are in the format "class_label_image.png"
-        file_name = filename.split('_')
-        label = file_name[0] + '_' + file_name[1] + '_' + file_name[2]
-        return label
-    
 
 
 # Model Class
@@ -75,12 +29,14 @@ class DenseLayer(nn.Module):
         # Batch Normalization, ReLU, and 1x1 Convolution (bottleneck layer)
         self.norm1 = nn.BatchNorm2d(num_input_features)
         self.relu1 = nn.ReLU(inplace=True)
-        self.conv1 = nn.Conv2d(num_input_features, bn_size * growth_rate, kernel_size=1, stride=1, bias=False)
+        self.conv1 = nn.Conv2d(
+            num_input_features, bn_size * growth_rate, kernel_size=1, stride=1, bias=False)
 
         # Batch Normalization, ReLU, and 3x3 Convolution
         self.norm2 = nn.BatchNorm2d(bn_size * growth_rate)
         self.relu2 = nn.ReLU(inplace=True)
-        self.conv2 = nn.Conv2d(bn_size * growth_rate, growth_rate, kernel_size=3, stride=1, padding=1, bias=False)
+        self.conv2 = nn.Conv2d(bn_size * growth_rate, growth_rate,
+                               kernel_size=3, stride=1, padding=1, bias=False)
 
         # Dropout rate
         self.drop_rate = float(drop_rate)
@@ -88,9 +44,10 @@ class DenseLayer(nn.Module):
     # Function to apply Batch Normalization, ReLU, and 1x1 Convolution
     def bn_function(self, inputs: List[torch.Tensor]) -> torch.Tensor:
         concated_features = torch.cat(inputs, 1)
-        bottleneck_output = self.conv1(self.relu1(self.norm1(concated_features)))
+        bottleneck_output = self.conv1(
+            self.relu1(self.norm1(concated_features)))
         return bottleneck_output
-    
+
     # Forward method of the DenseLayer
     def forward(self, input):
         if isinstance(input, torch.Tensor):
@@ -106,12 +63,15 @@ class DenseLayer(nn.Module):
 
         # Apply dropout if specified
         if self.drop_rate > 0:
-            new_features = F.dropout(new_features, p=self.drop_rate, training=self.training)
-        
+            new_features = F.dropout(
+                new_features, p=self.drop_rate, training=self.training)
+
         # Return the output of the dense layer
         return new_features
-    
+
 # Create a Dense Block Class
+
+
 class DenseBlock(nn.ModuleDict):
     def __init__(self, num_layers, num_input_features, bn_size, growth_rate, drop_rate):
         super().__init__()
@@ -125,7 +85,7 @@ class DenseBlock(nn.ModuleDict):
                 drop_rate=drop_rate
             )
             self.add_module(f"denselayer{i + 1}", layer)
-    
+
     # Forward method of the DenseBlock
     def forward(self, init_features):
         features = [init_features]
@@ -133,25 +93,29 @@ class DenseBlock(nn.ModuleDict):
             new_features = layer(features)
             features.append(new_features)
         return torch.cat(features, 1)
-    
+
 # Create a Transition Layer
+
+
 class Transition(nn.Sequential):
     def __init__(self, num_input_features, num_output_features):
         super().__init__()
         self.norm = nn.BatchNorm2d(num_input_features)
         self.relu = nn.ReLU(inplace=True)
-        self.conv = nn.Conv2d(num_input_features, num_output_features, kernel_size=1, stride=1, bias=False)
+        self.conv = nn.Conv2d(
+            num_input_features, num_output_features, kernel_size=1, stride=1, bias=False)
         self.pool = nn.AvgPool2d(kernel_size=2, stride=2)
+
 
 class DenseNet(nn.Module):
     def __init__(
         self,
-        growth_rate = 32,
-        block_config = (6, 12, 24, 16),
-        num_init_features = 64,
-        bn_size = 4,
-        drop_rate = 0,
-        num_classes = 1108,
+        growth_rate=32,
+        block_config=(6, 12, 24, 16),
+        num_init_features=64,
+        bn_size=4,
+        drop_rate=0,
+        num_classes=1108,
     ):
 
         super().__init__()
@@ -160,7 +124,8 @@ class DenseNet(nn.Module):
         self.features = nn.Sequential(
             OrderedDict(
                 [
-                    ("conv0", nn.Conv2d(1, num_init_features, kernel_size=7, stride=2, padding=3, bias=False)),
+                    ("conv0", nn.Conv2d(1, num_init_features,
+                     kernel_size=7, stride=2, padding=3, bias=False)),
                     ("norm0", nn.BatchNorm2d(num_init_features)),
                     ("relu0", nn.ReLU(inplace=True)),
                     ("pool0", nn.MaxPool2d(kernel_size=3, stride=2, padding=1)),
@@ -181,7 +146,8 @@ class DenseNet(nn.Module):
             self.features.add_module("denseblock%d" % (i + 1), block)
             num_features = num_features + num_layers * growth_rate
             if i != len(block_config) - 1:
-                trans = Transition(num_input_features=num_features, num_output_features=num_features // 2)
+                trans = Transition(num_input_features=num_features,
+                                   num_output_features=num_features // 2)
                 self.features.add_module("transition%d" % (i + 1), trans)
                 num_features = num_features // 2
 
@@ -212,8 +178,10 @@ class DenseNet(nn.Module):
 
 # Training
 # Instantiate the train and test datasets
-train_dataset = ImageDataset(train=True, transform=transforms.ToTensor())
-test_dataset = ImageDataset(train=False, transform=transforms.ToTensor())
+train_dataset = image_dataset.ImageDataset(
+    train=True, transform=transforms.ToTensor())
+test_dataset = image_dataset.ImageDataset(
+    train=False, transform=transforms.ToTensor())
 
 # Instantiate DataLoader for train and test datasets
 train_dataloader = DataLoader(train_dataset, batch_size=64, shuffle=True)
@@ -236,7 +204,8 @@ train_losses = []  # List to store training losses
 
 for epoch in range(num_epochs):
     model.train()
-    tqdm_dataloader = tqdm(train_dataloader, desc=f"Epoch {epoch + 1}/{num_epochs}", leave=False)
+    tqdm_dataloader = tqdm(
+        train_dataloader, desc=f"Epoch {epoch + 1}/{num_epochs}", leave=False)
 
     epoch_loss = 0.0  # Initialize the epoch loss
 
@@ -259,7 +228,8 @@ for epoch in range(num_epochs):
 
     # Calculate average epoch loss
     avg_epoch_loss = epoch_loss / len(train_dataset)
-    train_losses.append(avg_epoch_loss)  # Save the average epoch loss for plotting
+    # Save the average epoch loss for plotting
+    train_losses.append(avg_epoch_loss)
 
     # Print average epoch loss
     print(f"Epoch {epoch + 1}/{num_epochs}, Avg. Loss: {avg_epoch_loss}")
