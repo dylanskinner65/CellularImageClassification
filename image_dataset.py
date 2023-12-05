@@ -15,7 +15,7 @@ def update_target_ids(filepath='data'):
         controls = pd.read_csv(f'{filepath}/train_controls.csv')
         train = pd.read_csv(f'{filepath}/train.csv')
         df = pd.concat([train, controls], axis=0).reset_index(drop=True)
-        df['target_id'] = LabelEncoder().fit_transform(df['experiment'])
+        df['target_id'] = LabelEncoder().fit_transform(df['sirna'])
         df.to_csv(f'{filepath}/train_with_target_id.csv', index=False)
 
 
