@@ -4,6 +4,9 @@ __pycache__/
 *$py.class
 
 # Training images
+data/train_fixed/
+data/train/
+data/test/
 train_fixed/
 
 # C extensions

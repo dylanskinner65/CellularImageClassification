@@ -22,7 +22,7 @@ def update_target_ids(filepath='data'):
 class ImageDataset(Dataset):
     def __init__(self, train=True, transform=None, filepath='data'):
         update_target_ids(filepath)
-        postfix = 'train' if train else 'test'
+        postfix = 'train_fixed' if train else 'test'
         self.folder_path = f'{filepath}/{postfix}'
         self.df = pd.read_csv(
             f'{filepath}/train_with_target_id.csv') if train else pd.read_csv(f'{filepath}/{postfix}.csv')

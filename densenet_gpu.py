@@ -184,8 +184,8 @@ test_dataset = image_dataset.ImageDataset(
     train=False, transform=transforms.ToTensor())
 
 # Instantiate DataLoader for train and test datasets
-train_dataloader = DataLoader(train_dataset, batch_size=64, shuffle=True)
-test_dataloader = DataLoader(test_dataset, batch_size=64, shuffle=False)
+train_dataloader = DataLoader(train_dataset, batch_size=2, shuffle=True)
+test_dataloader = DataLoader(test_dataset, batch_size=2, shuffle=False)
 
 # Initialize the model
 model = DenseNet()
@@ -222,6 +222,17 @@ for epoch in range(num_epochs):
         epoch_loss += loss.item() * len(labels)  # Accumulate loss for the entire epoch
 
         tqdm_dataloader.set_postfix(loss=loss.item())
+    
+    # Evaluate the accuracy of the model
+    # print('Labels size', labels.size())
+    # print('Labels\n', labels)
+    # print('Outputs size', outputs.size())
+    # print('Outputs')
+    # print(outputs[0])
+
+    # place_df = pd.DataFrame({'Predicted': outputs.cpu().detach().numpy(), 'Actual': labels})
+    # print(f'Epoch {epoch}')
+    # place_df.head(5)
 
     # Close the tqdm progress bar for the epoch
     tqdm_dataloader.close()
