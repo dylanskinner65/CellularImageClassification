@@ -27,8 +27,6 @@ class ImageDataset(Dataset):
         self.df = pd.read_csv(
             f'{filepath}/train_with_target_id.csv') if train else pd.read_csv(f'{filepath}/{postfix}.csv')
         self.train = train
-        if self.train:
-            self.y = self.df['target_id'].values
         self.transform = transform
         self.file_list = self._get_file_list()
 
@@ -43,7 +41,7 @@ class ImageDataset(Dataset):
             image = self.transform(image)
 
         if self.train:
-            label = torch.tensor(self.y[idx])
+            label = self._extract_label(img_name)
             return image, label
 
         return image
@@ -64,4 +62,4 @@ class ImageDataset(Dataset):
         label = file_name[0] + '_' + file_name[1] + '_' + file_name[2]
         # selected_row = self.df.loc[self.df['experiment'] == label]
         # return selected_row['sirna'].values[0]
-        return label
+        return self.df.loc[self.df['id_code'] == label]['target_id'].values[0]
