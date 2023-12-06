@@ -176,82 +176,87 @@ class DenseNet(nn.Module):
         return out
 
 
-# Training
-# Instantiate the train and test datasets
-train_dataset = image_dataset.ImageDataset(
-    train=True, transform=transforms.ToTensor())
-test_dataset = image_dataset.ImageDataset(
-    train=False, transform=transforms.ToTensor())
+if __name__ == '__main__':
+    # Training
+    # Instantiate the train and test datasets
+    train_dataset = image_dataset.ImageDataset(
+        train=True, transform=transforms.ToTensor())
+    test_dataset = image_dataset.ImageDataset(
+        train=False, transform=transforms.ToTensor())
+    print('Successfully loaded datasets')
 
-# Instantiate DataLoader for train and test datasets
-train_dataloader = DataLoader(train_dataset, batch_size=2, shuffle=True)
-test_dataloader = DataLoader(test_dataset, batch_size=2, shuffle=False)
+    # Instantiate DataLoader for train and test datasets
+    train_dataloader = DataLoader(train_dataset, batch_size=2, shuffle=True)
+    test_dataloader = DataLoader(test_dataset, batch_size=2, shuffle=False)
+    print('Successfully loaded dataloaders')
 
-# Initialize the model
-model = DenseNet()
+    # Initialize the model
+    model = DenseNet()
 
-# Define the loss function and optimizer
-criterion = nn.CrossEntropyLoss()
-optimizer = optim.Adam(model.parameters(), lr=0.001)
+    # Define the loss function and optimizer
+    criterion = nn.CrossEntropyLoss()
+    optimizer = optim.Adam(model.parameters(), lr=0.001)
 
-# Set the device (CPU or GPU)
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-model.to(device)
+    # Set the device (CPU or GPU)
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    model.to(device)
 
-# Training loop
-num_epochs = 5
-train_losses = []  # List to store training losses
+    # Training loop
+    num_epochs = 5
+    train_losses = []  # List to store training losses
+    print('Starting training loop'')
 
-for epoch in range(num_epochs):
-    model.train()
-    tqdm_dataloader = tqdm(
-        train_dataloader, desc=f"Epoch {epoch + 1}/{num_epochs}", leave=False)
+    for epoch in range(num_epochs):
+        print('Epoch', epoch)
+        model.train()
+        tqdm_dataloader = tqdm(
+            train_dataloader, desc=f"Epoch {epoch + 1}/{num_epochs}", leave=False)
 
-    epoch_loss = 0.0  # Initialize the epoch loss
+        epoch_loss = 0.0  # Initialize the epoch loss
 
-    for batch in tqdm_dataloader:
-        images, labels = batch
-        images, labels = images.to(device), labels.to(device)
+        for batch in tqdm_dataloader:
+            images, labels = batch
+            images, labels = images.to(device), labels.to(device)
 
-        optimizer.zero_grad()
-        outputs = model(images)
-        loss = criterion(outputs, labels)
-        loss.backward()
-        optimizer.step()
+            optimizer.zero_grad()
+            outputs = model(images)
+            loss = criterion(outputs, labels)
+            loss.backward()
+            optimizer.step()
 
-        epoch_loss += loss.item() * len(labels)  # Accumulate loss for the entire epoch
+            epoch_loss += loss.item() * len(labels)  # Accumulate loss for the entire epoch
 
-        tqdm_dataloader.set_postfix(loss=loss.item())
-    
-    # Evaluate the accuracy of the model
-    # print('Labels size', labels.size())
-    # print('Labels\n', labels)
-    # print('Outputs size', outputs.size())
-    # print('Outputs')
-    # print(outputs[0])
+            tqdm_dataloader.set_postfix(loss=loss.item())
+        
+        # Evaluate the accuracy of the model
+        # print('Labels size', labels.size())
+        # print('Labels\n', labels)
+        # print('Outputs size', outputs.size())
+        # print('Outputs')
+        # print(outputs[0])
 
-    # place_df = pd.DataFrame({'Predicted': outputs.cpu().detach().numpy(), 'Actual': labels})
-    # print(f'Epoch {epoch}')
-    # place_df.head(5)
+        # place_df = pd.DataFrame({'Predicted': outputs.cpu().detach().numpy(), 'Actual': labels})
+        # print(f'Epoch {epoch}')
+        # place_df.head(5)
 
-    # Close the tqdm progress bar for the epoch
-    tqdm_dataloader.close()
+        # Close the tqdm progress bar for the epoch
+        tqdm_dataloader.close()
 
-    # Calculate average epoch loss
-    avg_epoch_loss = epoch_loss / len(train_dataset)
-    # Save the average epoch loss for plotting
-    train_losses.append(avg_epoch_loss)
+        # Calculate average epoch loss
+        avg_epoch_loss = epoch_loss / len(train_dataset)
+        # Save the average epoch loss for plotting
+        train_losses.append(avg_epoch_loss)
 
-    # Print average epoch loss
-    print(f"Epoch {epoch + 1}/{num_epochs}, Avg. Loss: {avg_epoch_loss}")
+        # Print average epoch loss
+        print(f"Epoch {epoch + 1}/{num_epochs}, Avg. Loss: {avg_epoch_loss}")
 
-# Training complete
-print("Training complete!")
+    # Training complete
+    print("Training complete!")
 
-# Plot the training losses
-plt.plot(train_losses, label='Training Loss')
-plt.xlabel('Epoch')
-plt.ylabel('Loss')
-plt.title('Training Loss over Epochs')
-plt.legend()
-plt.savefig('training_loss.png')
+    # Plot the training losses
+    plt.plot(train_losses, label='Training Loss')
+    plt.xlabel('Epoch')
+    plt.ylabel('Loss')
+    plt.title('Training Loss over Epochs')
+    plt.legend()
+    plt.savefig('training_loss.png')
