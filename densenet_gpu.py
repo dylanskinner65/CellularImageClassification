@@ -204,7 +204,7 @@ if __name__ == '__main__':
     # Training loop
     num_epochs = 5
     train_losses = []  # List to store training losses
-    print('Starting training loop'')
+    print('Starting training loop')
 
     for epoch in range(num_epochs):
         print('Epoch', epoch)
@@ -227,7 +227,7 @@ if __name__ == '__main__':
             epoch_loss += loss.item() * len(labels)  # Accumulate loss for the entire epoch
 
             tqdm_dataloader.set_postfix(loss=loss.item())
-        
+
         # Evaluate the accuracy of the model
         # print('Labels size', labels.size())
         # print('Labels\n', labels)
