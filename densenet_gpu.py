@@ -185,9 +185,12 @@ if __name__ == '__main__':
         train=False, transform=transforms.ToTensor())
     print('Successfully loaded datasets')
 
+    batch_size = 30
     # Instantiate DataLoader for train and test datasets
-    train_dataloader = DataLoader(train_dataset, batch_size=2, shuffle=True)
-    test_dataloader = DataLoader(test_dataset, batch_size=2, shuffle=False)
+    train_dataloader = DataLoader(
+        train_dataset, batch_size=batch_size, shuffle=True)
+    test_dataloader = DataLoader(
+        test_dataset, batch_size=batch_size, shuffle=False)
     print('Successfully loaded dataloaders')
 
     # Initialize the model
