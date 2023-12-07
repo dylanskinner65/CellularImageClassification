@@ -115,7 +115,7 @@ class DenseNet(nn.Module):
         num_init_features=64,
         bn_size=4,
         drop_rate=0,
-        num_classes=1108,
+        num_classes=1139,
     ):
 
         super().__init__()
