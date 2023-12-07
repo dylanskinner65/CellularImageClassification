@@ -20,7 +20,7 @@ def update_target_ids(filepath='data'):
 
 
 class ImageDataset(Dataset):
-    def __init__(self, train=True, transform=None, filepath='data'):
+    def __init__(self, train=True, transform=None, apply_equalize=False, clip_limit=0.01, filepath='data'):
         update_target_ids(filepath)
         postfix = 'train_fixed' if train else 'test'
         self.folder_path = f'{filepath}/{postfix}'
@@ -28,6 +28,8 @@ class ImageDataset(Dataset):
             f'{filepath}/train_with_target_id.csv') if train else pd.read_csv(f'{filepath}/{postfix}.csv')
         self.train = train
         self.transform = transform
+        self.apply_equalize = apply_equalize
+        self.clip_limit = clip_limit
         self.file_list = self._get_file_list()
 
     def __len__(self):
@@ -37,6 +39,11 @@ class ImageDataset(Dataset):
         img_name = self.file_list[idx]
         img_path = os.path.join(self.folder_path, img_name)
         image = Image.open(img_path)
+        
+        if self.apply_equalize:
+            image = np.asarray(image)/255.0
+            image = exposure.equalize_adapthist(image, clip_limit=self.clip_limit)
+        
         if self.transform:
             image = self.transform(image)
 
