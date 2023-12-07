@@ -6,6 +6,7 @@ import shutil
 from PIL import Image
 from torch.utils.data import Dataset
 from sklearn.preprocessing import LabelEncoder
+from skimage import exposure
 
 # make the train_with_target_id if it doesn't exist
 
