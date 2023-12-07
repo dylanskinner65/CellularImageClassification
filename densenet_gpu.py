@@ -180,9 +180,9 @@ if __name__ == '__main__':
     # Training
     # Instantiate the train and test datasets
     train_dataset = image_dataset.ImageDataset(
-        train=True, transform=transforms.ToTensor())
+        train=True, apply_equalize=True, transform=transforms.ToTensor())
     test_dataset = image_dataset.ImageDataset(
-        train=False, transform=transforms.ToTensor())
+        train=False, apply_equalize=True, transform=transforms.ToTensor())
     print('Successfully loaded datasets')
 
     batch_size = 30
@@ -206,7 +206,7 @@ if __name__ == '__main__':
     model.to(device)
 
     # Training loop
-    num_epochs = 5
+    num_epochs = 4
     train_losses = []  # List to store training losses
     print('Starting training loop')
 
