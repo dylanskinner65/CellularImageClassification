@@ -47,6 +47,7 @@ class ImageDataset(Dataset):
         
         if self.transform:
             image = self.transform(image)
+	        image.float_()
 
         if self.train:
             label = self._extract_label(img_name)
