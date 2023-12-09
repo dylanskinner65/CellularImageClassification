@@ -47,7 +47,7 @@ class ImageDataset(Dataset):
         
         if self.transform:
             image = self.transform(image)
-	        image.float_()
+            image = image.to(dtype=torch.float32)
 
         if self.train:
             label = self._extract_label(img_name)
