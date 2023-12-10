@@ -70,7 +70,7 @@ if __name__ == '__main__':
             real_image = real_image.view(-1,
                                          image_size * image_size).to(device)
 
-            noise = torch.randn(batch_size, latent_size)
+            noise = torch.randn(batch_size, latent_size).to(device)
 
             # train the discriminator
             disc_optim.zero_grad()
