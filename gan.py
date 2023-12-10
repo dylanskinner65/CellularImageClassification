@@ -64,8 +64,9 @@ if __name__ == '__main__':
     gen_optim = optim.Adam(generator.parameters(), lr)
     disc_optim = optim.Adam(discrimator.parameters(), lr)
 
+    loop = tqdm(total=len(dataloader), position=0, leave=False)
     for epoch in range(epochs):
-        for i, (real_image, _) in enumerate(tqdm(dataloader, desc=f"Epoch {epoch}/{epochs}", leave=False)):
+        for i, (real_image, _) in enumerate(dataloader):
 
             real_image = real_image.view(-1,
                                          image_size * image_size).to(device)
@@ -95,9 +96,10 @@ if __name__ == '__main__':
             gen_loss.backward()
             gen_optim.step()
 
-            if i % 100 == 0:
-                tqdm.write(
-                    f"Generator Loss: {gen_loss.item():.4f}, Discriminator Loss: {disc_loss.item():.4f}")
+            loop.set_description(f'epoch:{epoch}, batch:{i}, disc_loss:{disc_loss.item()}, gen_loss: {gen_loss.item()}')
+            loop.update(1)
+
+    loop.close()
 
     with torch.no_grad():
         noise = torch.randn(images_to_generate, latent_size)
