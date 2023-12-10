@@ -49,7 +49,7 @@ if __name__ == '__main__':
     image_size = 512
     lr = .0002
     epochs = 1
-    batch_size = 2
+    batch_size = 32
     images_to_generate = 24
 
     dataset = image_dataset.ImageDataset(transform=transforms.ToTensor())
