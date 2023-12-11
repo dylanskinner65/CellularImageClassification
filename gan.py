@@ -47,7 +47,7 @@ if __name__ == '__main__':
     latent_size = 100
     hidden_size = 256
     image_size = 512
-    lr = .001
+    lr = .00001
     epochs = 1
     batch_size = 32
     images_to_generate = 24
