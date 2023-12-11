@@ -14,7 +14,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 from torchvision import transforms, models
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, SubsetRandomSampler
 import image_dataset
 from tqdm import tqdm
 
@@ -184,13 +184,29 @@ if __name__ == '__main__':
     test_dataset = image_dataset.ImageDataset(
         train=False, apply_equalize=True, transform=transforms.ToTensor())
     print('Successfully loaded datasets')
+    
+     # Define the indices for the train and test sets
+    dataset_size = len(train_dataset)
+    split = int(0.8 * dataset_size)  # 80% for training, 20% for testing
+    
+    indices = list(range(dataset_size))
+    train_indices, test_indices = indices[:split], indices[split:]
 
+    # Create data samplers for train and test sets
+    train_sampler = SubsetRandomSampler(train_indices)
+    test_sampler = SubsetRandomSampler(test_indices)
+    
+    # Create DataLoader instances using the samplers
     batch_size = 30
+    train_dataloader = DataLoader(train_dataset, batch_size=batch_size, sampler=train_sampler)
+    test_dataloader = DataLoader(train_dataset, batch_size=batch_size, sampler=test_sampler)
+
+    
     # Instantiate DataLoader for train and test datasets
-    train_dataloader = DataLoader(
-        train_dataset, batch_size=batch_size, shuffle=True)
-    test_dataloader = DataLoader(
-        test_dataset, batch_size=batch_size, shuffle=False)
+    # train_dataloader = DataLoader(
+    #     train_dataset, batch_size=batch_size, shuffle=True)
+    # test_dataloader = DataLoader(
+    #     test_dataset, batch_size=batch_size, shuffle=False)
     print('Successfully loaded dataloaders')
 
     # Initialize the model
@@ -208,13 +224,13 @@ if __name__ == '__main__':
     # Training loop
     num_epochs = 4
     train_losses = []  # List to store training losses
+    train_acc = []
     print('Starting training loop')
 
     for epoch in range(num_epochs):
-        print('Epoch', epoch)
+        print(f'\nEpoch {epoch + 1}/{num_epochs}')
         model.train()
-        tqdm_dataloader = tqdm(
-            train_dataloader, desc=f"Epoch {epoch + 1}/{num_epochs}", leave=False)
+        tqdm_dataloader = tqdm(train_dataloader, desc=f"Epoch {epoch + 1}/{num_epochs}", leave=False)
 
         epoch_loss = 0.0  # Initialize the epoch loss
 
@@ -231,6 +247,61 @@ if __name__ == '__main__':
             epoch_loss += loss.item() * len(labels)  # Accumulate loss for the entire epoch
 
             tqdm_dataloader.set_postfix(loss=loss.item())
+
+        # Evaluate the model's accuracy
+        model.eval()
+        correct = 0
+        total = 0
+        for batch in tqdm(test_dataloader):
+            images, labels = batch
+            images, labels = images.to(device), labels.to(device)
+            outputs = model(images)
+            _, predicted = torch.max(outputs.data, 1)
+            total += len(labels)
+            correct += (predicted == labels).sum().item()
+
+        accuracy = correct / total
+        train_acc.append(accuracy)
+        tqdm_dataloader.set_postfix(loss=epoch_loss / len(train_dataloader.dataset), accuracy=accuracy)
+
+
+    # for epoch in range(num_epochs):
+    #     print('Epoch', epoch)
+    #     model.train()
+    #     tqdm_dataloader = tqdm(
+    #         train_dataloader, desc=f"Epoch {epoch + 1}/{num_epochs}", leave=False)
+
+    #     epoch_loss = 0.0  # Initialize the epoch loss
+
+    #     for batch in tqdm_dataloader:
+    #         images, labels = batch
+    #         images, labels = images.to(device), labels.to(device)
+
+    #         optimizer.zero_grad()
+    #         outputs = model(images)
+    #         loss = criterion(outputs, labels)
+    #         loss.backward()
+    #         optimizer.step()
+
+    #         epoch_loss += loss.item() * len(labels)  # Accumulate loss for the entire epoch
+
+    #         tqdm_dataloader.set_postfix(loss=loss.item())
+        
+    #     # Evaluate the model's accuracy
+    #     model.eval()
+    #     correct = 0
+    #     total = 0
+    #     with torch.no_grad():
+    #         for batch in tqdm(test_dataloader):
+    #             images, labels = batch
+    #             images, labels = images.to(device), labels.to(device)
+    #             outputs = model(images)
+    #             _, predicted = torch.max(outputs.data, 1)
+    #             total += len(labels)
+    #             correct += (predicted == labels).sum().item()
+        
+    #     tqdm_dataloader.set_postfix(accuracy=correct/total)
+        
 
         # Evaluate the accuracy of the model
         # print('Labels size', labels.size())
@@ -252,15 +323,22 @@ if __name__ == '__main__':
         train_losses.append(avg_epoch_loss)
 
         # Print average epoch loss
-        print(f"Epoch {epoch + 1}/{num_epochs}, Avg. Loss: {avg_epoch_loss}")
+        print(f"Epoch {epoch + 1}/{num_epochs}, Avg. Loss: {avg_epoch_loss}, Accuracy: {accuracy}")
 
     # Training complete
     print("Training complete!")
 
     # Plot the training losses
-    plt.plot(train_losses, label='Training Loss')
-    plt.xlabel('Epoch')
-    plt.ylabel('Loss')
-    plt.title('Training Loss over Epochs')
-    plt.legend()
+    fig, ax = plt.subplots(1, 2, figsize=(12, 8), dpi=200)
+    ax[0].plot(train_losses, label='Training Loss')
+    ax[0].set_xlabel('Epoch')
+    ax[0].set_ylabel('Loss')
+    ax[0].set_title('Training Loss over Epochs')
+    ax[0].legend()
+    
+    ax[1].plot(train_acc, label='Training Accuracy')
+    ax[1].set_xlabel('Epoch')
+    ax[1].set_ylabel('Accuracy')
+    ax[1].set_title('Training Accuracy over Epochs')
+    ax[1].legend()
     plt.savefig('training_loss.png')
