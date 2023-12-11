@@ -47,7 +47,7 @@ if __name__ == '__main__':
     latent_size = 100
     hidden_size = 256
     image_size = 512
-    lr = .0002
+    lr = .001
     epochs = 1
     batch_size = 32
     images_to_generate = 24
@@ -96,7 +96,8 @@ if __name__ == '__main__':
             gen_loss.backward()
             gen_optim.step()
 
-            loop.set_description(f'epoch:{epoch}, batch:{i}, disc_loss:{disc_loss.item()}, gen_loss: {gen_loss.item()}')
+            loop.set_description(
+                f'epoch:{epoch}, batch:{i}, disc_loss:{disc_loss.item()}, gen_loss: {gen_loss.item()}')
             loop.update(1)
 
     loop.close()
