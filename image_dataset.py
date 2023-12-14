@@ -5,6 +5,7 @@ import os
 import shutil
 from PIL import Image
 from torch.utils.data import Dataset
+from torchvision import transforms
 from sklearn.preprocessing import LabelEncoder
 from skimage import exposure
 
@@ -21,7 +22,7 @@ def update_target_ids(filepath='data'):
 
 
 class ImageDataset(Dataset):
-    def __init__(self, train=True, transform=None, apply_equalize=False, clip_limit=0.01, filepath='data'):
+    def __init__(self, train=True, transform=None, apply_equalize=False, clip_limit=0.01, apply_transform_train=False, apply_transform_test=False, filepath='data'):
         update_target_ids(filepath)
         postfix = 'train_fixed' if train else 'test'
         self.folder_path = f'{filepath}/{postfix}'
@@ -30,6 +31,8 @@ class ImageDataset(Dataset):
         self.train = train
         self.transform = transform
         self.apply_equalize = apply_equalize
+        self.apply_transform_train = apply_transform_train
+        self.apply_transform_test = apply_transform_test
         self.clip_limit = clip_limit
         self.file_list = self._get_file_list()
 
@@ -48,6 +51,29 @@ class ImageDataset(Dataset):
         if self.transform:
             image = self.transform(image)
             image = image.to(dtype=torch.float32)
+        
+        if self.apply_transform_train:
+            train_transform = transforms.Compose([
+                # transforms.ToTensor(),
+                transforms.RandomResizedCrop(size=(512, 512), scale=(0.5, 1.0), interpolation=Image.NEAREST),
+                transforms.RandomHorizontalFlip(),
+                transforms.RandomVerticalFlip(), 
+                transforms.RandomRotation(90),
+                transforms.Normalize(mean=[0.0], std=[1.0]),
+                transforms.Lambda(lambda x: x*torch.normal(1.0, 0.1, size=x.size()) + torch.normal(0, 0.1, size=x.size()))
+                ])
+
+            image = train_transform(image)
+        
+        if self.apply_transform_test:
+            test_transform = transforms.Compose([
+                transforms.ToTensor(),
+                transforms.RandomHorizontalFlip(1.0),
+                transforms.RandomVerticalFlip(1.0),
+                transforms.RandomRotation((90,90)),
+            ])
+
+            image = test_transform(image)
 
         if self.train:
             label = self._extract_label(img_name)
