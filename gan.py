@@ -7,6 +7,7 @@ import torch.optim as optim
 from torchvision import transforms, models
 from torchvision.utils import save_image
 from tqdm import tqdm
+from matplotlib import pyplot as plt
 
 # define the generator network
 
@@ -49,8 +50,9 @@ if __name__ == '__main__':
     image_size = 512
     lr = .00001
     epochs = 1
-    batch_size = 32
+    batch_size = 5
     images_to_generate = 24
+    checkpoint_num = 100
 
     dataset = image_dataset.ImageDataset(transform=transforms.ToTensor())
 
@@ -64,9 +66,14 @@ if __name__ == '__main__':
     gen_optim = optim.Adam(generator.parameters(), lr)
     disc_optim = optim.Adam(discrimator.parameters(), lr)
 
+    # save losses
+    disc_losses = []
+    gen_losses = []
+
     loop = tqdm(total=len(dataloader), position=0, leave=False)
     for epoch in range(epochs):
         for i, (real_image, _) in enumerate(dataloader):
+            batch_size = real_image.size(0)
 
             real_image = real_image.view(-1,
                                          image_size * image_size).to(device)
@@ -100,8 +107,53 @@ if __name__ == '__main__':
                 f'epoch:{epoch}, batch:{i}, disc_loss:{disc_loss.item()}, gen_loss: {gen_loss.item()}')
             loop.update(1)
 
+            disc_losses.append(disc_loss.item())
+            gen_losses.append(gen_loss.item())
+
+            # checkpoint every checkpoint_num batches
+            if i % checkpoint_num == 0:
+                checkpoint = {
+                    'epoch': epoch,
+                    'batch': i,
+                    'discriminator_state_dict': discrimator.state_dict(),
+                    'generator_state_dict': generator.state_dict(),
+                    'discriminator_optimizer_state_dict': disc_optim.state_dict(),
+                    'generator_optimizer_state_dict': gen_optim.state_dict(),
+                    'discriminator_loss': disc_loss.item(),
+                    'generator_loss': gen_loss.item()
+                }
+                torch.save(
+                    checkpoint, f'checkpoints/checkpoint_{epoch}_{i}.pth')
+
     loop.close()
 
+    # save the final checkpoint
+    checkpoint = {
+        'epoch': epoch,
+        'batch': i,
+        'discriminator_state_dict': discrimator.state_dict(),
+        'generator_state_dict': generator.state_dict(),
+        'discriminator_optimizer_state_dict': disc_optim.state_dict(),
+        'generator_optimizer_state_dict': gen_optim.state_dict(),
+        'discriminator_loss': disc_loss.item(),
+        'generator_loss': gen_loss.item()
+    }
+    torch.save(checkpoint, f'checkpoints/final_checkpoint.pth')
+
+    # save the losses
+    torch.save(disc_losses, 'losses/disc_losses.pth')
+    torch.save(gen_losses, 'losses/gen_losses.pth')
+
+    # plot the losses
+    plt.plot(disc_losses, label='Discriminator Loss')
+    plt.plot(gen_losses, label='Generator Loss')
+    plt.legend()
+    plt.xlabel('Batch')
+    plt.ylabel('Loss')
+    plt.title('GAN Losses')
+    plt.savefig('losses/losses.png')
+
+    # generate images
     with torch.no_grad():
         noise = torch.randn(images_to_generate, latent_size)
         generated_images = generator(noise).view(-1, 1, image_size, image_size)
