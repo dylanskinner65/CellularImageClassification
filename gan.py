@@ -99,13 +99,10 @@ if __name__ == '__main__':
             checkpoint['generator_optimizer_state_dict'])
         disc_optim.load_state_dict(
             checkpoint['discriminator_optimizer_state_dict'])
-        epoch = checkpoint['epoch']
-        i = checkpoint['batch']
-        disc_losses = torch.load('losses/disc_losses.pth')
-        gen_losses = torch.load('losses/gen_losses.pth')
-        print(f'Loaded checkpoint from epoch {epoch}, batch {i}')
-    except:
+        print(f'Loaded checkpoint')
+    except Exception as e:
         print('No checkpoint found')
+        print(e)
 
     # if generate only
     if generate_only:
