@@ -53,18 +53,17 @@ if __name__ == '__main__':
     parser.add_argument('--genonly', type=bool, default=False)
     parser.add_argument('--genpath', type=str)
     parser.add_argument('--checkpoint', type=str, default=None)
+    parser.add_argument('--device', type=str, default='cpu')
     args = parser.parse_args()
 
     # set generate only
     generate_only = args.genonly
     gen_path = args.genpath
     checkpoint_path = args.checkpoint
+    device = args.device
 
     # set manual seed
     torch.manual_seed(42)
-
-    # Set device (CPU or GPU)
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     latent_size = 100
     hidden_size = 256
