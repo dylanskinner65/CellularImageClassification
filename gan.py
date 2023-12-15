@@ -8,6 +8,7 @@ from torchvision import transforms, models
 from torchvision.utils import save_image
 from tqdm import tqdm
 from matplotlib import pyplot as plt
+import argparse
 
 # define the generator network
 
@@ -38,7 +39,27 @@ class Discriminator(nn.Module):
         return self.sigmoid(self.fc2(self.relu(self.fc1(x))))
 
 
+def generate_images(generator, device, images_to_generate, latent_size, image_size, path):
+    with torch.no_grad():
+        noise = torch.randn(images_to_generate, latent_size)
+        generated_images = generator(
+            noise.to(device)).view(-1, 1, image_size, image_size)
+        save_image(generated_images, path)
+
+
 if __name__ == '__main__':
+    # parse arguments
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--genonly', type=bool, default=False)
+    parser.add_argument('--genpath', type=str)
+    parser.add_argument('--checkpoint', type=str, default=None)
+    args = parser.parse_args()
+
+    # set generate only
+    generate_only = args.genonly
+    gen_path = args.genpath
+    checkpoint_path = args.checkpoint
+
     # set manual seed
     torch.manual_seed(42)
 
@@ -69,6 +90,29 @@ if __name__ == '__main__':
     # save losses
     disc_losses = []
     gen_losses = []
+
+    # load checkpoint if it exists
+    try:
+        checkpoint = torch.load(checkpoint_path)
+        generator.load_state_dict(checkpoint['generator_state_dict'])
+        discrimator.load_state_dict(checkpoint['discriminator_state_dict'])
+        gen_optim.load_state_dict(
+            checkpoint['generator_optimizer_state_dict'])
+        disc_optim.load_state_dict(
+            checkpoint['discriminator_optimizer_state_dict'])
+        epoch = checkpoint['epoch']
+        i = checkpoint['batch']
+        disc_losses = torch.load('losses/disc_losses.pth')
+        gen_losses = torch.load('losses/gen_losses.pth')
+        print(f'Loaded checkpoint from epoch {epoch}, batch {i}')
+    except:
+        print('No checkpoint found')
+
+    # if generate only
+    if generate_only:
+        generate_images(generator, device, images_to_generate, latent_size,
+                        image_size, gen_path)
+        exit()
 
     loop = tqdm(total=len(dataloader), position=0, leave=False)
     for epoch in range(epochs):
@@ -154,7 +198,5 @@ if __name__ == '__main__':
     plt.savefig('losses/losses.png')
 
     # generate images
-    with torch.no_grad():
-        noise = torch.randn(images_to_generate, latent_size)
-        generated_images = generator(noise).view(-1, 1, image_size, image_size)
-        save_image(generated_images, "generated_images.png")
+    generate_images(generator, device, images_to_generate, latent_size,
+                    image_size, gen_path)
