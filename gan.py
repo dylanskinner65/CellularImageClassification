@@ -56,11 +56,16 @@ if __name__ == '__main__':
     parser.add_argument('--device', type=str, default='cpu')
     args = parser.parse_args()
 
-    # set generate only
+    print('Loading arguments')
     generate_only = args.genonly
     gen_path = args.genpath
     checkpoint_path = args.checkpoint
     device = args.device
+    print('genonly:', generate_only)
+    print('genpath:', gen_path)
+    print('checkpoint:', checkpoint_path)
+    print('device:', device)
+    print('Arguments loaded')
 
     # set manual seed
     torch.manual_seed(42)
