@@ -67,7 +67,7 @@ if __name__ == '__main__':
     lr = .00001
     batch_size = 32
     images_to_generate = 24
-    checkpoint_num = 100
+    checkpoint_num = 1000
     gen_weight = 0.5
     disc_weight = 1
     gen_lr = 0.00002
@@ -102,7 +102,6 @@ if __name__ == '__main__':
     except Exception as e:
         print('No checkpoint found')
         print(e)
-
 
     loop = tqdm(total=len(dataloader), position=0, leave=False)
     for epoch in range(epochs):
