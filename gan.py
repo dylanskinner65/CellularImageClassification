@@ -56,7 +56,6 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     generate_only = args.genonly
-    gen_path = args.genpath
     checkpoint_path = args.checkpoint
     device = args.device
     epochs = args.epochs
