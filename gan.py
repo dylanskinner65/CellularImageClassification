@@ -49,13 +49,11 @@ def generate_images(generator, device, images_to_generate, latent_size, image_si
 if __name__ == '__main__':
     # parse arguments
     parser = argparse.ArgumentParser()
-    parser.add_argument('--genonly', type=bool, default=False)
     parser.add_argument('--checkpoint', type=str, default=None)
     parser.add_argument('--device', type=str, default='cpu')
     parser.add_argument('--epochs', type=int, default=3)
     args = parser.parse_args()
 
-    generate_only = args.genonly
     checkpoint_path = args.checkpoint
     device = args.device
     epochs = args.epochs
@@ -105,11 +103,6 @@ if __name__ == '__main__':
         print('No checkpoint found')
         print(e)
 
-    # if generate only
-    if generate_only:
-        generate_images(generator, device, images_to_generate, latent_size,
-                        image_size, 'generated_images/generate_only.png')
-        exit()
 
     loop = tqdm(total=len(dataloader), position=0, leave=False)
     for epoch in range(epochs):
