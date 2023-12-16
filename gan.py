@@ -108,7 +108,7 @@ if __name__ == '__main__':
     # if generate only
     if generate_only:
         generate_images(generator, device, images_to_generate, latent_size,
-                        image_size, gen_path)
+                        image_size, 'generated_images/generate_only.png')
         exit()
 
     loop = tqdm(total=len(dataloader), position=0, leave=False)
@@ -169,7 +169,7 @@ if __name__ == '__main__':
                     checkpoint, f'checkpoints/checkpoint_{epoch}_{i}.pth')
 
                 generate_images(generator, device, images_to_generate, latent_size,
-                                image_size, f'losses/generated_after_{epoch}_{i}.png')
+                                image_size, f'generated_images/generated_after_{epoch}_{i}.png')
 
     loop.close()
 
@@ -201,4 +201,4 @@ if __name__ == '__main__':
 
     # generate images
     generate_images(generator, device, images_to_generate, latent_size,
-                    image_size, 'final_images.png')
+                    image_size, 'generated_images/final_images.png')
