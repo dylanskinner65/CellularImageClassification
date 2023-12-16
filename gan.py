@@ -19,10 +19,9 @@ class Generator(nn.Module):
         self.fc1 = nn.Linear(input_size, hidden_size)
         self.relu = nn.ReLU()
         self.fc2 = nn.Linear(hidden_size, output_size)
-        self.tanh = nn.Tanh()
 
     def forward(self, x):
-        return self.tanh(self.fc2(self.relu(self.fc1(x))))
+        return torch.tanh(self.fc2(self.relu(self.fc1(x))))
 
 # define the discriminator network
 
@@ -51,21 +50,16 @@ if __name__ == '__main__':
     # parse arguments
     parser = argparse.ArgumentParser()
     parser.add_argument('--genonly', type=bool, default=False)
-    parser.add_argument('--genpath', type=str)
     parser.add_argument('--checkpoint', type=str, default=None)
     parser.add_argument('--device', type=str, default='cpu')
+    parser.add_argument('--epochs', type=int, default=3)
     args = parser.parse_args()
 
-    print('Loading arguments')
     generate_only = args.genonly
     gen_path = args.genpath
     checkpoint_path = args.checkpoint
     device = args.device
-    print('genonly:', generate_only)
-    print('genpath:', gen_path)
-    print('checkpoint:', checkpoint_path)
-    print('device:', device)
-    print('Arguments loaded')
+    epochs = args.epochs
 
     # set manual seed
     torch.manual_seed(42)
@@ -74,22 +68,25 @@ if __name__ == '__main__':
     hidden_size = 256
     image_size = 512
     lr = .00001
-    epochs = 1
-    batch_size = 5
+    batch_size = 32
     images_to_generate = 24
     checkpoint_num = 100
+    gen_weight = 0.5
+    disc_weight = 1
+    gen_lr = 0.00002
+    disc_lr = 0.00001
 
     dataset = image_dataset.ImageDataset(transform=transforms.ToTensor())
 
     generator = Generator(latent_size, hidden_size,
                           image_size * image_size).to(device)
-    discrimator = Discriminator(
+    discriminator = Discriminator(
         image_size * image_size, hidden_size, 1).to(device)
     dataloader = DataLoader(dataset, batch_size, shuffle=True)
 
     criterion = nn.BCELoss()
-    gen_optim = optim.Adam(generator.parameters(), lr)
-    disc_optim = optim.Adam(discrimator.parameters(), lr)
+    gen_optim = optim.Adam(generator.parameters(), gen_lr)
+    disc_optim = optim.Adam(discriminator.parameters(), disc_lr)
 
     # save losses
     disc_losses = []
@@ -99,7 +96,7 @@ if __name__ == '__main__':
     try:
         checkpoint = torch.load(checkpoint_path)
         generator.load_state_dict(checkpoint['generator_state_dict'])
-        discrimator.load_state_dict(checkpoint['discriminator_state_dict'])
+        discriminator.load_state_dict(checkpoint['discriminator_state_dict'])
         gen_optim.load_state_dict(
             checkpoint['generator_optimizer_state_dict'])
         disc_optim.load_state_dict(
@@ -129,23 +126,25 @@ if __name__ == '__main__':
             disc_optim.zero_grad()
             real_labels = torch.ones(batch_size, 1).to(device)
 
-            real_outputs = discrimator(real_image)
+            real_outputs = discriminator(real_image)
             real_loss = criterion(real_outputs, real_labels)
 
             fake_images = generator(noise)
-            fake_outputs = discrimator(fake_images.detach())
+            fake_outputs = discriminator(fake_images.detach())
             fake_labels = torch.zeros_like(fake_outputs).to(device)
             fake_loss = criterion(fake_outputs, fake_labels)
 
-            disc_loss = real_loss + fake_loss
+            disc_loss = disc_weight * (real_loss + fake_loss)
             disc_loss.backward()
+            nn.utils.clip_grad_norm_(discriminator.parameters(), max_norm=1.0)
             disc_optim.step()
 
             gen_optim.zero_grad()
-            outputs = discrimator(fake_images)
-            gen_loss = criterion(outputs, real_labels)
+            outputs = discriminator(fake_images)
+            gen_loss = gen_weight * criterion(outputs, real_labels)
 
             gen_loss.backward()
+            nn.utils.clip_grad_norm_(generator.parameters(), max_norm=1.0)
             gen_optim.step()
 
             loop.set_description(
@@ -160,7 +159,7 @@ if __name__ == '__main__':
                 checkpoint = {
                     'epoch': epoch,
                     'batch': i,
-                    'discriminator_state_dict': discrimator.state_dict(),
+                    'discriminator_state_dict': discriminator.state_dict(),
                     'generator_state_dict': generator.state_dict(),
                     'discriminator_optimizer_state_dict': disc_optim.state_dict(),
                     'generator_optimizer_state_dict': gen_optim.state_dict(),
@@ -170,13 +169,16 @@ if __name__ == '__main__':
                 torch.save(
                     checkpoint, f'checkpoints/checkpoint_{epoch}_{i}.pth')
 
+                generate_images(generator, device, images_to_generate, latent_size,
+                                image_size, f'losses/generated_after_{epoch}_{i}.png')
+
     loop.close()
 
     # save the final checkpoint
     checkpoint = {
         'epoch': epoch,
         'batch': i,
-        'discriminator_state_dict': discrimator.state_dict(),
+        'discriminator_state_dict': discriminator.state_dict(),
         'generator_state_dict': generator.state_dict(),
         'discriminator_optimizer_state_dict': disc_optim.state_dict(),
         'generator_optimizer_state_dict': gen_optim.state_dict(),
@@ -200,4 +202,4 @@ if __name__ == '__main__':
 
     # generate images
     generate_images(generator, device, images_to_generate, latent_size,
-                    image_size, gen_path)
+                    image_size, 'final_images.png')
