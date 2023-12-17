@@ -13,5 +13,5 @@ export CUDA_LAUNCH_BLOCKING=1
 
 # LOAD MODULES, INSERT CODE, AND RUN YOUR PROGRAMS HERE
 mamba activate cic
-python ~/CellularImageClassification/resnet_pretrained.py --t=5 --checkpoint_folder='resnet_checkpoints' -p=True
+python ~/CellularImageClassification/resnet_pretrained.py --t=5 --checkpoint_folder='resnet_checkpoints' -p=False
 
