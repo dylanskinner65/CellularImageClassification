@@ -17,11 +17,27 @@ class Generator(nn.Module):
     def __init__(self, input_size, hidden_size, output_size):
         super(Generator, self).__init__()
         self.fc1 = nn.Linear(input_size, hidden_size)
-        self.relu = nn.ReLU()
-        self.fc2 = nn.Linear(hidden_size, output_size)
+        self.bn1 = nn.BatchNorm1d(hidden_size)
+        self.relu1 = nn.ReLU()
+        self.fc2 = nn.Linear(hidden_size, hidden_size)
+        self.bn2 = nn.BatchNorm1d(hidden_size)
+        self.relu2 = nn.ReLU()
+        self.fc3 = nn.Linear(hidden_size, output_size)
+        self.noise = nn.Dropout(0.5)
 
     def forward(self, x):
-        return torch.tanh(self.fc2(self.relu(self.fc1(x))))
+        x = self.noise(x)
+        x = self.fc1(x)
+        x = self.bn1(x)
+        x = self.relu1(x)
+        x = self.noise(x)
+        x = self.fc2(x)
+        x = self.bn2(x)
+        x = self.relu2(x)
+        x = self.fc3(x)
+        return torch.tanh(x)
+
+
 
 # define the discriminator network
 
@@ -30,7 +46,7 @@ class Discriminator(nn.Module):
     def __init__(self, input_size, hidden_size, output_size):
         super(Discriminator, self).__init__()
         self.fc1 = nn.Linear(input_size, hidden_size)
-        self.relu = nn.ReLU()
+        self.relu = nn.LeakyReLU(0.2)
         self.fc2 = nn.Linear(hidden_size, output_size)
         self.sigmoid = nn.Sigmoid()
 
@@ -44,6 +60,11 @@ def generate_images(generator, device, images_to_generate, latent_size, image_si
         generated_images = generator(
             noise.to(device)).view(-1, 1, image_size, image_size)
         save_image(generated_images, path)
+
+def weights_init(m):
+    if isinstance(m, nn.Conv2d) or isinstance(m, nn.Linear):
+        nn.init.normal_(m.weight.data, 0.0, 0.02)
+        nn.init.constant_(m.bias.data, 0)
 
 
 if __name__ == '__main__':
@@ -62,7 +83,7 @@ if __name__ == '__main__':
     torch.manual_seed(42)
 
     latent_size = 100
-    hidden_size = 256
+    hidden_size = 512
     image_size = 512
     lr = .00001
     batch_size = 32
@@ -71,15 +92,25 @@ if __name__ == '__main__':
     gen_weight = 0.5
     disc_weight = 1
     gen_lr = 0.00002
-    disc_lr = 0.00001
+    disc_lr = 0.0001
 
-    dataset = image_dataset.ImageDataset(transform=transforms.ToTensor())
+    dataset = image_dataset.ImageDataset(
+        transform=transforms.Compose([
+            transforms.ToTensor(),
+            transforms.Normalize((0.5,), (0.5,))
+            ])
+        )
 
     generator = Generator(latent_size, hidden_size,
                           image_size * image_size).to(device)
     discriminator = Discriminator(
         image_size * image_size, hidden_size, 1).to(device)
     dataloader = DataLoader(dataset, batch_size, shuffle=True)
+
+    # Apply weight initialization to both generator and discriminator
+    generator.apply(weights_init)
+    discriminator.apply(weights_init)
+    discriminator = nn.utils.spectral_norm(discriminator)
 
     criterion = nn.BCELoss()
     gen_optim = optim.Adam(generator.parameters(), gen_lr)
