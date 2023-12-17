@@ -110,7 +110,6 @@ if __name__ == '__main__':
     # Apply weight initialization to both generator and discriminator
     generator.apply(weights_init)
     discriminator.apply(weights_init)
-    discriminator = nn.utils.spectral_norm(discriminator)
 
     criterion = nn.BCELoss()
     gen_optim = optim.Adam(generator.parameters(), gen_lr)
