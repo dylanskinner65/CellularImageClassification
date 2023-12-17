@@ -3,6 +3,10 @@ import pandas as pd
 from collections import OrderedDict
 from tqdm import tqdm
 import warnings
+import os
+import glob
+import argparse
+from pathlib import Path
 
 import torch
 import torch.nn as nn
@@ -18,13 +22,27 @@ import image_dataset
 # Ignore warnings during execution
 warnings.filterwarnings("ignore")
 
+######################################
+########## HELPER FUNCTIONS ##########
+######################################
+
 # Create topk accuracy function
 def topk_accuracy(output, target, topk=(1,)):
-    """Computes the accuracy over the k top predictions for the specified values of k"""
+    """
+    Computes the accuracy over the k top predictions for the specified values of k.
+
+    Parameters:
+    - output (torch.Tensor): Model predictions (logits).
+    - target (torch.Tensor): Ground truth labels.
+    - topk (tuple): Tuple of integers specifying the top-k values for accuracy computation.
+
+    Returns:
+    List of accuracy values for each specified top-k value.
+    """
     with torch.no_grad():
         maxk = max(topk)
         batch_size = target.size(0)
-        
+
         # Get top k predictions.
         _, pred = output.topk(maxk, dim=1)
 
@@ -37,27 +55,120 @@ def topk_accuracy(output, target, topk=(1,)):
             correct_k = correct[:k].reshape(-1).float().sum(0, keepdim=True)
             res.append(torch.round(correct_k.mul_(1.0 / batch_size), decimals=4))
         return res
+
+
+def save_checkpoint(model, epoch, optimizer, loss, train_acc1, train_acc5, filename):
+    """
+    Save a checkpoint of the model, optimizer, and training metrics.
+
+    Parameters:
+    - model (torch.nn.Module): The PyTorch model.
+    - epoch (int): The current epoch.
+    - optimizer (torch.optim.Optimizer): The optimizer used for training.
+    - loss: The current training loss.
+    - train_acc1: Top-1 training accuracy.
+    - train_acc5: Top-5 training accuracy.
+    - filename (str): The filename for saving the checkpoint.
+    
+    Returns:
+    None
+    """
+    checkpoint = {
+        'model': model.state_dict(),
+        'epoch': epoch,
+        'optimizer': optimizer.state_dict(),
+        'loss': loss,
+        'train_acc1': train_acc1,
+        'train_acc5': train_acc5
+    }
+    torch.save(checkpoint, filename)
     
 
-def train():
-    # Choose the variant of ResNet (e.g., ResNet-18)
-    model = models.resnet18(pretrained=True)
+def load_checkpoint(model, optimizer, filename):
+    """
+    Load a previously saved model checkpoint.
 
-    # Modify the first convolutional layer for grayscale images
-    num_input_channels = 1  # Grayscale images have only one channel
-    model.conv1 = nn.Conv2d(num_input_channels, 64, kernel_size=7, stride=2, padding=3, bias=False)
+    Parameters:
+    - model (torch.nn.Module): The PyTorch model.
+    - optimizer (torch.optim.Optimizer): The optimizer used for training.
+    - filename (str): The filename of the saved checkpoint.
 
-    # Change the number out potential output classes.
-    num_classes = 1139
-    model.fc = nn.Linear(model.fc.in_features, num_classes)
+    Returns:
+    Tuple containing the loaded model, optimizer, start epoch, current loss, top-1 training accuracy, and top-5 training accuracy.
+    """
+    checkpoint = torch.load(filename)
+    model.load_state_dict(checkpoint['model'])
+    optimizer.load_state_dict(checkpoint['optimizer'])
+    start = checkpoint['epoch']
+    curr_loss = checkpoint['loss']
+    train_acc1 = checkpoint['train_acc1']
+    train_acc5 = checkpoint['train_acc5']
+    return model, optimizer, start, curr_loss, train_acc1, train_acc5
+
+
+def get_recent_checkpoint(checkpoint_folder='checkpoints'):
+    """
+    Get the filename of the most recent model checkpoint in the 'resnet_checkpoints' directory.
+
+    Returns:
+    str: The filename of the most recent checkpoint.
+    """
+    list_of_files = glob.glob(f'{checkpoint_folder}/*.pth')  # * means all, if need specific format then *.pth
+    latest_file = max(list_of_files, key=os.path.getctime)
+    return latest_file
+
+
+def train(epochs, checkpoint_folder, pretrained, verbose):
+    
+    start_with_checkpoint = pretrained
+    if start_with_checkpoint:
+        model = models.resnet18(pretrained=True)
+        
+        # Modify the first convolutional layer for grayscale images
+        num_input_channels = 1  # Grayscale images have only one channel
+        model.conv1 = nn.Conv2d(num_input_channels, 64, kernel_size=7, stride=2, padding=3, bias=False)
+
+        # Change the number out potential output classes.
+        num_classes = 1139
+        model.fc = nn.Linear(model.fc.in_features, num_classes)
+
+        optimizer = optim.Adam(model.parameters(), lr=0.001)
+        
+        try:
+            checkpoint_name = get_recent_checkpoint(checkpoint_folder)
+        except ValueError:
+            print('Error in start_with_checkpoint; no checkpoints found. Set start_with_checkpoint = False')
+        
+        model, optimizer, start_epoch, train_losses, train_acc1, train_acc5 = load_checkpoint(model, optimizer, checkpoint_name)
+        print('Successfully loaded checkpoint') if verbose else None
+    elif not start_with_checkpoint:
+        model = models.resnet18(pretrained=True)
+        
+        # Modify the first convolutional layer for grayscale images
+        num_input_channels = 1  # Grayscale images have only one channel
+        model.conv1 = nn.Conv2d(num_input_channels, 64, kernel_size=7, stride=2, padding=3, bias=False)
+
+        # Change the number out potential output classes.
+        num_classes = 1139
+        model.fc = nn.Linear(model.fc.in_features, num_classes)
+
+        optimizer = optim.Adam(model.parameters(), lr=0.001)
+        start_epoch = 0
+        train_acc1 = []
+        train_acc5 = []
+        train_losses = []
+        print('Starting from scratch') if verbose else None
+    
+    # Make sure the checkpoint folder exists (used for checkpointing in training loop)
+    Path(checkpoint_folder).mkdir(parents=True, exist_ok=True)
 
     train_dataset = image_dataset.ImageDataset(
         train=True, apply_equalize=False, apply_transform_train=True, transform=transforms.ToTensor())
     test_dataset = image_dataset.ImageDataset(
         train=False, apply_equalize=False, apply_transform_test=True, transform=transforms.ToTensor())
-    print('Successfully loaded datasets')
+    print('Successfully loaded datasets') if verbose else None
 
-        # Define the indices for the train and test sets
+    # Define the indices for the train and test sets
     dataset_size = len(train_dataset)
     split = int(0.8 * dataset_size)  # 80% for training, 20% for testing
 
@@ -72,7 +183,7 @@ def train():
     batch_size = 30
     train_dataloader = DataLoader(train_dataset, batch_size=batch_size, sampler=train_sampler)
     test_dataloader = DataLoader(train_dataset, batch_size=batch_size, sampler=test_sampler)
-    print('Successfully loaded dataloaders')
+    print('Successfully loaded dataloaders') if verbose else None
 
     # Define the loss function and optimizer
     criterion = nn.CrossEntropyLoss()
@@ -80,19 +191,14 @@ def train():
 
     # Set the device (CPU or GPU)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    print('Using Device', device)
+    print('Using Device', device) if verbose else None
     model.to(device)
 
     # Training loop
-    num_epochs = 5
-    train_losses = []  # List to store training losses
-    train_acc1 = []
-    train_acc5 = []
-    print('Starting training loop')
+    num_epochs = epochs + start_epoch
+    print('Starting training loop') if verbose else None
 
-    # tqdm_dataloader = tqdm(train_dataloader, desc=f"Epoch {epoch + 1}/{num_epochs}", leave=False)
-    for epoch in range(num_epochs):
-        # print(f'\nEpoch {epoch + 1}/{num_epochs}')
+    for epoch in range(start_epoch, num_epochs):
         model.train()
         tqdm_dataloader = tqdm(train_dataloader, desc=f"Epoch {epoch + 1}/{num_epochs}", leave=False)
 
@@ -151,9 +257,9 @@ def train():
         avg_epoch_loss = epoch_loss / len(train_dataset)
         # Save the average epoch loss for plotting
         train_losses.append(avg_epoch_loss)
-
-        # Print average epoch loss
-        # print(f"Epoch {epoch + 1}/{num_epochs}, Avg. Loss: {avg_epoch_loss}, Top 1 Acc: {accuracy_top1}, Top 5 Acc: {accuracy_top5}")
+        
+        # Save the model
+        save_checkpoint(model, epoch, optimizer, train_losses, train_acc1, train_acc5, f"{checkpoint_folder}/resnet18_epoch{epoch}.pth")
 
     # Training complete
     print("Training complete!")
@@ -175,5 +281,23 @@ def train():
     plt.savefig('resnet_acc_loss.png')
 
 if __name__ == '__main__':
-    train()
-    print('Done!')
+    # Create ArgumentParser object
+    parser = argparse.ArgumentParser(description='Arguments for ResNet Training.')
+
+    # Define command-line arguments
+    parser.add_argument('--training_epochs', '-t', default=5, type=int, help='Number of epochs to train for.')
+    parser.add_argument('--checkpoint_folder', '-c', type=str, help='Folder to store checkpoint files.')
+    parser.add_argument('--pretrained', '-p', default=True, help='Use checkpointed ResNet model.')
+    parser.add_argument('--verbose', '-v', default=False, help='Print verbose output.')
+
+    # Parse the command-line arguments
+    args = parser.parse_args()
+
+    # Access the values of the arguments
+    epochs = args.training_epochs
+    checkpoint_folder = args.checkpoint_folder
+    pretrained = args.pretrained
+    verbose = args.verbose
+    
+    train(epochs, checkpoint_folder, pretrained, verbose)
+    # print('Done!')
