@@ -9,6 +9,10 @@ data/train/
 data/test/
 train_fixed/
 
+# Ignore PyTorch checkpoints
+*.pth
+resnet_checkpoint/*.pth
+
 # C extensions
 *.so
 
