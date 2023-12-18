@@ -297,6 +297,7 @@ if __name__ == '__main__':
     epochs = args.training_epochs
     checkpoint_folder = args.checkpoint_folder
     pretrained = args.pretrained
+    print('Pretrained:', pretrained)
     verbose = args.verbose
     
     train(epochs, checkpoint_folder, pretrained, verbose)
