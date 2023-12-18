@@ -304,8 +304,7 @@ if __name__ == '__main__':
                         type=int, help='Number of epochs to train for.')
     parser.add_argument('--checkpoint_folder', type=str,
                         help='Folder to store checkpoint files.')
-    parser.add_argument('--pretrained', default=True,
-                        type=bool, help='Use checkpointed ResNet model.')
+    parser.add_argument('--pretrained', action=argparse.BooleanOptionalAction, default=True)
     parser.add_argument('--verbose', default=False,
                         help='Print verbose output.')
 
