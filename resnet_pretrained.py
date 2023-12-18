@@ -27,6 +27,8 @@ warnings.filterwarnings("ignore")
 ######################################
 
 # Create topk accuracy function
+
+
 def topk_accuracy(output, target, topk=(1,)):
     """
     Computes the accuracy over the k top predictions for the specified values of k.
@@ -53,7 +55,8 @@ def topk_accuracy(output, target, topk=(1,)):
         res = []
         for k in topk:
             correct_k = correct[:k].reshape(-1).float().sum(0, keepdim=True)
-            res.append(torch.round(correct_k.mul_(1.0 / batch_size), decimals=4))
+            res.append(torch.round(correct_k.mul_(
+                1.0 / batch_size), decimals=4))
         return res
 
 
@@ -69,7 +72,7 @@ def save_checkpoint(model, epoch, optimizer, loss, train_acc1, train_acc5, filen
     - train_acc1: Top-1 training accuracy.
     - train_acc5: Top-5 training accuracy.
     - filename (str): The filename for saving the checkpoint.
-    
+
     Returns:
     None
     """
@@ -82,7 +85,7 @@ def save_checkpoint(model, epoch, optimizer, loss, train_acc1, train_acc5, filen
         'train_acc5': train_acc5
     }
     torch.save(checkpoint, filename)
-    
+
 
 def load_checkpoint(model, optimizer, filename):
     """
@@ -113,40 +116,45 @@ def get_recent_checkpoint(checkpoint_folder='checkpoints'):
     Returns:
     str: The filename of the most recent checkpoint.
     """
-    list_of_files = glob.glob(f'{checkpoint_folder}/*.pth')  # * means all, if need specific format then *.pth
+    list_of_files = glob.glob(
+        f'{checkpoint_folder}/*.pth')  # * means all, if need specific format then *.pth
     latest_file = max(list_of_files, key=os.path.getctime)
     return latest_file
 
 
 def train(epochs, checkpoint_folder, pretrained, verbose):
-    
+
     start_with_checkpoint = pretrained
     if start_with_checkpoint:
         model = models.resnet18(pretrained=True)
-        
+
         # Modify the first convolutional layer for grayscale images
         num_input_channels = 1  # Grayscale images have only one channel
-        model.conv1 = nn.Conv2d(num_input_channels, 64, kernel_size=7, stride=2, padding=3, bias=False)
+        model.conv1 = nn.Conv2d(num_input_channels, 64,
+                                kernel_size=7, stride=2, padding=3, bias=False)
 
         # Change the number out potential output classes.
         num_classes = 1139
         model.fc = nn.Linear(model.fc.in_features, num_classes)
 
         optimizer = optim.Adam(model.parameters(), lr=0.001)
-        
+
         try:
             checkpoint_name = get_recent_checkpoint(checkpoint_folder)
         except ValueError:
-            print('Error in start_with_checkpoint; no checkpoints found. Set start_with_checkpoint = False')
-        
-        model, optimizer, start_epoch, train_losses, train_acc1, train_acc5 = load_checkpoint(model, optimizer, checkpoint_name)
+            print(
+                'Error in start_with_checkpoint; no checkpoints found. Set start_with_checkpoint = False')
+
+        model, optimizer, start_epoch, train_losses, train_acc1, train_acc5 = load_checkpoint(
+            model, optimizer, checkpoint_name)
         print('Successfully loaded checkpoint') if verbose else None
     elif not start_with_checkpoint:
         model = models.resnet18(pretrained=True)
-        
+
         # Modify the first convolutional layer for grayscale images
         num_input_channels = 1  # Grayscale images have only one channel
-        model.conv1 = nn.Conv2d(num_input_channels, 64, kernel_size=7, stride=2, padding=3, bias=False)
+        model.conv1 = nn.Conv2d(num_input_channels, 64,
+                                kernel_size=7, stride=2, padding=3, bias=False)
 
         # Change the number out potential output classes.
         num_classes = 1139
@@ -158,7 +166,7 @@ def train(epochs, checkpoint_folder, pretrained, verbose):
         train_acc5 = []
         train_losses = []
         print('Starting from scratch') if verbose else None
-    
+
     # Make sure the checkpoint folder exists (used for checkpointing in training loop)
     Path(checkpoint_folder).mkdir(parents=True, exist_ok=True)
 
@@ -181,8 +189,10 @@ def train(epochs, checkpoint_folder, pretrained, verbose):
 
     # Create DataLoader instances using the samplers
     batch_size = 30
-    train_dataloader = DataLoader(train_dataset, batch_size=batch_size, sampler=train_sampler)
-    test_dataloader = DataLoader(train_dataset, batch_size=batch_size, sampler=test_sampler)
+    train_dataloader = DataLoader(
+        train_dataset, batch_size=batch_size, sampler=train_sampler)
+    test_dataloader = DataLoader(
+        train_dataset, batch_size=batch_size, sampler=test_sampler)
     print('Successfully loaded dataloaders') if verbose else None
 
     # Define the loss function and optimizer
@@ -200,7 +210,8 @@ def train(epochs, checkpoint_folder, pretrained, verbose):
 
     for epoch in range(start_epoch, num_epochs):
         model.train()
-        tqdm_dataloader = tqdm(train_dataloader, desc=f"Epoch {epoch + 1}/{num_epochs}", leave=False)
+        tqdm_dataloader = tqdm(
+            train_dataloader, desc=f"Epoch {epoch + 1}/{num_epochs}", leave=False)
 
         epoch_loss = 0.0  # Initialize the epoch loss
 
@@ -235,11 +246,12 @@ def train(epochs, checkpoint_folder, pretrained, verbose):
 
             # Compute top-k accuracy
             topk_acc = topk_accuracy(outputs, labels, topk=topk)
-            
+
             correct_top1 += topk_acc[0].item()
             correct_top5 += topk_acc[1].item()
-            
-            tqdm_dataloader.set_postfix(OrderedDict({'loss': loss.item(), 'top1_acc': topk_acc[0].item(), 'top5_acc': topk_acc[1].item()}))
+
+            tqdm_dataloader.set_postfix(OrderedDict({'loss': loss.item(
+            ), 'top1_acc': topk_acc[0].item(), 'top5_acc': topk_acc[1].item()}))
 
             total += len(labels)
 
@@ -257,9 +269,10 @@ def train(epochs, checkpoint_folder, pretrained, verbose):
         avg_epoch_loss = epoch_loss / len(train_dataset)
         # Save the average epoch loss for plotting
         train_losses.append(avg_epoch_loss)
-        
+
         # Save the model
-        save_checkpoint(model, epoch, optimizer, train_losses, train_acc1, train_acc5, f"{checkpoint_folder}/resnet18_epoch{epoch}.pth")
+        save_checkpoint(model, epoch, optimizer, train_losses, train_acc1,
+                        train_acc5, f"{checkpoint_folder}/resnet18_epoch{epoch}.pth")
 
     # Training complete
     print("Training complete!")
@@ -277,18 +290,24 @@ def train(epochs, checkpoint_folder, pretrained, verbose):
     ax[1].set_ylabel('Accuracy')
     ax[1].set_title('Training Accuracy over Epochs')
     ax[1].legend()
-    
+
     plt.savefig('resnet_acc_loss.png')
+
 
 if __name__ == '__main__':
     # Create ArgumentParser object
-    parser = argparse.ArgumentParser(description='Arguments for ResNet Training.')
+    parser = argparse.ArgumentParser(
+        description='Arguments for ResNet Training.')
 
     # Define command-line arguments
-    parser.add_argument('--training_epochs', '-t', default=5, type=int, help='Number of epochs to train for.')
-    parser.add_argument('--checkpoint_folder', '-c', type=str, help='Folder to store checkpoint files.')
-    parser.add_argument('--pretrained', '-p', default=True, help='Use checkpointed ResNet model.')
-    parser.add_argument('--verbose', '-v', default=False, help='Print verbose output.')
+    parser.add_argument('--training_epochs', '-t', default=5,
+                        type=int, help='Number of epochs to train for.')
+    parser.add_argument('--checkpoint_folder', '-c', type=str,
+                        help='Folder to store checkpoint files.')
+    parser.add_argument('--pretrained', '-p', default=True,
+                        type=bool, help='Use checkpointed ResNet model.')
+    parser.add_argument('--verbose', '-v', default=False,
+                        help='Print verbose output.')
 
     # Parse the command-line arguments
     args = parser.parse_args()
@@ -299,6 +318,6 @@ if __name__ == '__main__':
     pretrained = args.pretrained
     print('Pretrained:', pretrained)
     verbose = args.verbose
-    
+
     train(epochs, checkpoint_folder, pretrained, verbose)
     # print('Done!')
