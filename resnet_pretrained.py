@@ -300,13 +300,13 @@ if __name__ == '__main__':
         description='Arguments for ResNet Training.')
 
     # Define command-line arguments
-    parser.add_argument('--training_epochs', '-t', default=5,
+    parser.add_argument('--training_epochs', default=5,
                         type=int, help='Number of epochs to train for.')
-    parser.add_argument('--checkpoint_folder', '-c', type=str,
+    parser.add_argument('--checkpoint_folder', type=str,
                         help='Folder to store checkpoint files.')
-    parser.add_argument('--pretrained', '-p', default=True,
+    parser.add_argument('--pretrained', default=True,
                         type=bool, help='Use checkpointed ResNet model.')
-    parser.add_argument('--verbose', '-v', default=False,
+    parser.add_argument('--verbose', default=False,
                         help='Print verbose output.')
 
     # Parse the command-line arguments
