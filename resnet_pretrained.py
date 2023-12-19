@@ -305,7 +305,7 @@ if __name__ == '__main__':
     parser.add_argument('--checkpoint_folder', type=str,
                         help='Folder to store checkpoint files.')
     parser.add_argument('--pretrained', action=argparse.BooleanOptionalAction, default=True)
-    parser.add_argument('--verbose', action=argparse.BooleanOptionalAction ,default=False)
+    parser.add_argument('--verbose', action=argparse.BooleanOptionalAction , default=False)
 
     # Parse the command-line arguments
     args = parser.parse_args()
@@ -314,7 +314,6 @@ if __name__ == '__main__':
     epochs = args.training_epochs
     checkpoint_folder = args.checkpoint_folder
     pretrained = args.pretrained
-    print('Pretrained:', pretrained)
     verbose = args.verbose
 
     train(epochs, checkpoint_folder, pretrained, verbose)
