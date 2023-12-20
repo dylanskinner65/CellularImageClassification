@@ -180,7 +180,7 @@ def train(epochs, checkpoint_folder, pretrained, verbose):
     ])
 
     train_dataset = image_dataset.ImageDataset(
-        train=True, apply_equalize=False, apply_transform_train=True, transform=train_transform)
+        train=True, apply_equalize=False, apply_transform_train=True, transform=transforms.ToTensor())
     test_dataset = image_dataset.ImageDataset(
         train=False, apply_equalize=False, apply_transform_test=True, transform=transforms.ToTensor())
     print('Successfully loaded datasets') if verbose else None
