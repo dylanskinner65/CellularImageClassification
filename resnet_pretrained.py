@@ -187,10 +187,19 @@ def train(epochs, checkpoint_folder, pretrained, verbose):
     train_sampler = SubsetRandomSampler(train_indices)
     test_sampler = SubsetRandomSampler(test_indices)
 
+    #make transform
+    train_transform = transforms.Compose([
+    transforms.RandomHorizontalFlip(),
+    transforms.RandomRotation(degrees=10),
+    transforms.ToTensor(),
+    # Add more transforms as needed
+    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+    ])
+
     # Create DataLoader instances using the samplers
     batch_size = 30
     train_dataloader = DataLoader(
-        train_dataset, batch_size=batch_size, sampler=train_sampler)
+        train_dataset, batch_size=batch_size, sampler=train_sampler, apply_transform_train=True, transforms=train_transform)
     test_dataloader = DataLoader(
         train_dataset, batch_size=batch_size, sampler=test_sampler)
     print('Successfully loaded dataloaders') if verbose else None
